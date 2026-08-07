@@ -33,6 +33,7 @@ paginate = 5
     codeFences = true
     guessSyntax = true
     tabWidth = 2
+    noClasses = false
   [markup.goldmark.renderer]
     unsafe = true
 
