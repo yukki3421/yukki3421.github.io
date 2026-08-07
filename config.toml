@@ -1,5 +1,7 @@
 baseurl = "https://yukki3421.github.io/"
 languageCode = "zh-cn"
+defaultContentLanguage = "zh"
+
 title = "yukki3421"
 theme = "PaperMod"
 
@@ -7,6 +9,13 @@ enableRobotsTXT = true
 buildDrafts = false
 buildFuture = false
 buildExpired = false
+
+[languages]
+  [languages.zh]
+    label = "中文"
+    locale = "zh-CN"
+    direction = "ltr"
+    weight = 1
 
 [pagination]
   pagerSize = 10
@@ -23,7 +32,6 @@ buildExpired = false
   ShowPostNavLinks = true
   ShowBreadCrumbs = true
   ShowCodeCopyButtons = true
-  ShowWordCount = true
   ShowToc = true
   TocOpen = false
 
@@ -56,17 +64,6 @@ buildExpired = false
     name = "搜索"
     url = "/search/"
     weight = 40
-
-[markup]
-  [markup.highlight]
-    style = "github-dark"
-    lineNos = false
-    codeFences = true
-    guessSyntax = true
-    tabWidth = 2
-    noClasses = false
-  [markup.goldmark.renderer]
-    unsafe = true
 
 [outputs]
   home = ["HTML", "RSS", "JSON"]
