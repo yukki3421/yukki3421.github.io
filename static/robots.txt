@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://yukki3421.github.io/sitemap.xml

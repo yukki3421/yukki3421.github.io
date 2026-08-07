@@ -1,0 +1,40 @@
+baseurl = "https://yukki3421.github.io/"
+languageCode = "zh-cn"
+title = "yukki3421"
+theme = "PaperMod"
+paginate = 5
+
+[params]
+  defaultTheme = "auto"
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowWordCount = true
+  ShowToc = true
+  TocOpen = false
+
+  [params.homeInfoParams]
+    Title = "Hi 👋 I'm yukki3421"
+    Content = "AI 安全 | 推荐系统 | 量化交易 | 瞎折腾"
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/yukki3421"
+
+[params.assets]
+  favicon = "/favicon.ico"
+
+[markup]
+  [markup.highlight]
+    style = "github-dark"
+    lineNos = false
+    codeFences = true
+    guessSyntax = true
+    tabWidth = 2
+  [markup.goldmark.renderer]
+    unsafe = true
+
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
