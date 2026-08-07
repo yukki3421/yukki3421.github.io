@@ -2,7 +2,9 @@ baseurl = "https://yukki3421.github.io/"
 languageCode = "zh-cn"
 title = "yukki3421"
 theme = "PaperMod"
-paginate = 5
+
+[pagination]
+  pagerSize = 5
 
 [params]
   defaultTheme = "auto"
