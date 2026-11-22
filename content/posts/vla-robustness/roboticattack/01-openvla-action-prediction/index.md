@@ -1,7 +1,7 @@
 ---
 title: "roboticAttack 笔记（一）｜OpenVLA 如何从图像预测动作"
 date: 2026-11-21
-draft: true
+draft: false
 description: "从自己跑出的 LIBERO 相机画面出发，理解 DINOv2、SigLIP、动作 token 和机械臂执行之间的关系。"
 tags: ["VLA", "OpenVLA", "LIBERO", "DINOv2", "SigLIP"]
 math: true

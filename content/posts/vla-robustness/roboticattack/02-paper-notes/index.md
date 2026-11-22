@@ -1,7 +1,7 @@
 ---
 title: "roboticAttack 笔记（二）｜UADA、UPA、TMA 和论文指标"
 date: 2026-11-21
-draft: true
+draft: false
 description: "用同一个机械臂动作理解 UADA、UPA、TMA 与 UMA 基线，读清 FR、NAD、真机结果及消融和防御实验。"
 tags: ["VLA", "OpenVLA", "机器人鲁棒性", "论文笔记"]
 math: true
