@@ -132,6 +132,17 @@ $$
 
 为什么写 \(\arg\max\)？从“匹配回原位置”看，较大的 \(\mathcal L_{\mathrm{patch}}\) 表示匹配变差；从“寻找有效扰动”看，作者希望观察到这种变化。式（4）给出的是**特征偏移这个代理目标**。如果变化主要发生在与当前动作无关的特征上，机器人仍然可能完成任务。
 
+### OpenVLA 的代码怎样实现 EDPA？ {#openvla-implementation}
+
+以官方仓库中的 OpenVLA 实现为例，顺着一批数据可以看到式（1）到（4）分别落在哪一步。
+
+1. **准备原图、贴图和指令。** 入口 `cp_openvla.py` 从离线轨迹读相机帧和对应指令。每张原图都有自己的贴图版本，两者配同一条指令。一批图像共用一份 RGB 贴片张量，每张图的放置位置可以不同。[数据入口](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/cp_openvla.py#L89) · [贴图实现](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/VLAAttacker/pytorch/EDPA.py#L73)
+2. **提取三组特征。** 原图和贴图都经过 `vision_backbone` 和 `projector`，各得到一组 \(B\times N\times d\) 的视觉向量。指令的 token ID 通过输入嵌入表得到 \(B\times M\times d\) 的文字向量。\(B\) 是批大小，\(N\) 是视觉位置数，\(M\) 是指令 token 数，\(d\) 是投影后的特征维度。三组向量都在进入语言模型主干之前取出。[特征提取接口](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/utils/openvla/__init__.py#L69)
+3. **计算特征偏移。** `compute_loss` 为每张图构造一个 \(N\times N\) 的图像块相似度矩阵，以对角线作为正确位置，用交叉熵得到 \(\mathcal L_{\mathrm{patch}}\)。随后计算贴图前后两张 \(N\times M\) 的图文相似度矩阵，统计对应元素之差的绝对值，使用掩码排除填充 token。两项各用自己的指数滑动平均做尺度归一化，再加权合成一个批次分数。[损失实现](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/VLAAttacker/pytorch/EDPA.py#L113)
+4. **把分数的梯度传回贴片。** `generate_one_step` 把原图和指令的特征作为固定参照，保留贴图分支的计算图。由此可计算批次分数对贴片像素的梯度。更新只作用于贴片，同一份张量随后传给下一批图像。训练得到的贴片再用于 LIBERO 的闭环评估。[单轮计算](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/VLAAttacker/pytorch/EDPA.py#L186) · [论文 §4.2](https://arxiv.org/html/2510.13237v1#S4.SS2)
+
+对照论文和代码时要留意两个约定。**式（2）以原图位置为起点，在贴图中找对应位置。仓库反过来，以贴图位置为起点，在原图中找对应位置。** 对角线的匹配关系相同，softmax 归一化的方向相反，所以损失数值可以不同。式（4）的 \(\alpha_1\) 乘在图像块对比项上，仓库的参数 `alpha` 乘在图文对齐项上。[论文式（2）与式（4）](https://arxiv.org/html/2510.13237v1#S3.SS2) · [仓库的权重说明](https://github.com/trustmlyoungscientist/EDPA_attack_defense/blob/3b52691/readme.md#L70)
+
 ## 第二部分：从原始编码器到防御微调后的编码器
 
 ### 式（5）的两个预测为什么共用一个参考？
