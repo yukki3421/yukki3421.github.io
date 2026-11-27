@@ -2,7 +2,7 @@
 title: "roboticAttack 笔记（一）｜OpenVLA 如何从图像预测动作"
 date: 2026-11-21
 draft: false
-description: "先看 OpenVLA 的三个模块，再沿着相机画面和任务指令读到动作执行，以及模型如何从 RLDS 示范学习。"
+description: "先看 OpenVLA 的三个模块，再沿着相机画面和任务指令读到动作执行，以及模型如何从 RLDS 示范学习。文末对照 GR00T N1 与 π 系列的注意力和动作生成。"
 tags: ["VLA", "OpenVLA", "LIBERO", "DINOv2", "SigLIP"]
 math: true
 ---
@@ -114,6 +114,36 @@ $$
 
 拿夹爪分量举例。如果图像显示夹爪刚好到达碗沿，示范的下一步是闭合，模型给正确 token 的概率为 `0.8` 时，这个位置的损失约为 `0.22`。如果只给 `0.1` 的概率，损失就增至约 `2.30`。训练直接用示范给出的正确 token 计算这个损失，因此不需要先让机械臂完成一轮任务再拿成功奖励。
 
+## GR00T N1 的自注意力和交叉注意力分别看什么？
+
+![GR00T N1 架构。Eagle-2 的图文特征进入交叉注意力。机器人状态和带噪动作经各自的编码器进入 DiT，动作解码器输出用于更新整段动作的向量。](./gr00t-n1-architecture.png)
+
+*图 3。NVIDIA 的 GR00T N1 架构图。上方的紫色和蓝色 token 是图像和指令。下方的红色和浅橙色 token 是机器人状态和当前带噪的动作序列。来源为 GR00T N1 原论文图 3。* [&#91;5&#93; §2.1](#ref-5)
+
+沿着图从左到右读。Eagle-2 先把相机画面和「把苹果放到底层架子」的指令变成**图文特征**。与此同时，状态编码器把机器人的当前状态变成向量，动作编码器把当前这轮的带噪动作序列变成向量。**状态和动作进入 DiT，图文特征作为交叉注意力的条件。** [&#91;5&#93; §2.1](#ref-5)
+
+| DiT 里的层 | Query（Q，发起查询） | Key 和 Value（K、V，提供信息） | 更新结果 |
+| --- | --- | --- | --- |
+| **交叉注意力** | 当前层的状态与动作 token | Eagle-2 输出的图文 token | 状态和动作表征读入与任务有关的视觉和语言信息 |
+| **自注意力** | 当前层的状态与动作 token | 同一组状态与动作 token | 各个动作时间步结合机器人当前状态和同一动作块里的其他步 |
+
+图里两类层交替出现。交叉注意力把「苹果在哪里、要放到哪一层」这类信息带入动作表征。自注意力让同一段里的靠近、抓取和移动可以互相参考。两种注意力都在更新 **DiT 的状态／动作序列**，Eagle-2 的图文特征由上方那条路提供。 [&#91;5&#93; §2.1](#ref-5)
+
+每轮 DiT 计算结束后，动作解码器把对应未来各步的隐向量投影回动作空间，给出**这轮要怎么更新整段动作**。图底部的 `K iterations` 是重复更新的轮数，右侧的 `a_t … a_{t+H−1}` 则是动作块里的 `H` 个控制步。推理从噪声开始，经过多轮更新，最终得到连续的动作序列。 [&#91;5&#93; §2.1](#ref-5)
+
+## π 系列和原版 OpenVLA 怎样生成动作？
+
+| 模型 | 图像、指令和机器人状态怎么进入模型 | 推理时动作怎么出来 |
+| --- | --- | --- |
+| **原版 OpenVLA（本文的 LIBERO 检查点）** | DINOv2 和 SigLIP 提取的视觉特征与指令一起进入 Llama 2 | 自回归地逐个生成动作 token，一个 token 对应当前控制步的一个动作分量。最后把这些 token 解码成数值 [&#91;2&#93;](#ref-2) |
+| **π₀** | PaliGemma 的权重处理图像和指令，动作专家的权重处理机器人状态和带噪动作 | 用流匹配多轮更新整段连续动作，每轮同时更新动作块中的各步 [&#91;6&#93;](#ref-6) |
+| **π₀.₅** | 在 π₀ 的思路上加入高层子任务预测。论文的分层推理先生成文字子任务，再把它作为低层动作的条件。机器人状态离散化后作为输入 token | 预训练使用 FAST 动作 token，最终部署时由动作专家用流匹配生成连续动作块 [&#91;7&#93; §IV](#ref-7) |
+| **GR00T N1** | Eagle-2 编码图像和指令，独立的 DiT 用交叉注意力读取图文特征，用自注意力融合机器人状态和动作序列 | 用流匹配多轮更新整段连续动作，再交给机器人执行 [&#91;5&#93; §2.1](#ref-5) |
+
+**π₀ 的图文和动作在哪里汇合？** 图文、机器人状态、动作分别占据同一个 Transformer 输入序列的不同区块。图文用 VLM 权重，状态和动作使用动作专家权重。掩码允许动作读图文与状态，也允许动作块内的各步双向注意；图文区块只读图文。这种信息交换发生在**同一层的自注意力**里。对照上面的图，GR00T N1 则有独立的 DiT 交叉注意力层专门读取 Eagle-2 的输出。π₀.₅ 同样通过共享注意力连接图文和连续动作。 [&#91;6&#93; 附录 A-B](#ref-6) · [&#91;7&#93; 附录 A-E](#ref-7)
+
+**π₀-FAST** 是 π 系列里的自回归版本。它先把整段动作压缩成一串离散 token，再逐个生成 token 并解码回动作块。读这些模型时，可以先确认**一个 token 表示什么**。原版 OpenVLA 的一个动作 token 表示一个分量的量化区间，π₀ 连续动作分支里的一个动作 token 是某一控制步整条动作向量的嵌入。 [&#91;2&#93;](#ref-2) · [&#91;6&#93;](#ref-6) · [&#91;8&#93;](#ref-8)
+
 论文改动的是图 1 上方的**相机画面**，随后观察变化怎样传到动作预测和实际执行。[笔记（二）]({{< relref "/posts/vla-robustness/roboticattack/02-paper-notes/index.md" >}}) 从这个研究问题出发，讲三种方法与 UMA 基线，以及作者为什么同时看动作偏差和任务失败率。
 
 ## 参考文献
@@ -133,3 +163,19 @@ Maxime Oquab, Timothée Darcet, Théo Moutakanni, et al. *Transactions on Machin
 #### [4] Sigmoid Loss for Language Image Pre-Training {#ref-4}
 
 Xiaohua Zhai, Basil Mustafa, Alexander Kolesnikov, and Lucas Beyer. *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, 2023, pp. 11975–11986. [CVF 论文](https://openaccess.thecvf.com/content/ICCV2023/html/Zhai_Sigmoid_Loss_for_Language_Image_Pre-Training_ICCV_2023_paper.html)
+
+#### [5] GR00T N1: An Open Foundation Model for Generalist Humanoid Robots {#ref-5}
+
+NVIDIA. arXiv:2503.14734, 2025. [论文 §2.1 与图 3](https://arxiv.org/html/2503.14734v2#S2.SS1)
+
+#### [6] π₀: A Vision-Language-Action Flow Model for General Robot Control {#ref-6}
+
+Kevin Black, Noah Brown, Danny Driess, et al. arXiv:2410.24164, 2024. [论文全文](https://arxiv.org/html/2410.24164v1)
+
+#### [7] π₀.₅: a Vision-Language-Action Model with Open-World Generalization {#ref-7}
+
+Physical Intelligence. arXiv:2504.16054, 2025. [论文全文](https://arxiv.org/html/2504.16054v1)
+
+#### [8] FAST: Efficient Action Tokenization for Vision-Language-Action Models {#ref-8}
+
+Karl Pertsch, Kyle Stachowicz, Brian Ichter, et al. arXiv:2501.09747, 2025. [论文全文](https://arxiv.org/html/2501.09747v1)
