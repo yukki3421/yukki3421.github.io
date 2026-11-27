@@ -1,7 +1,7 @@
 ---
 title: "DreamZero 架构篇：Wan、联合 Flow Matching 与闭环推理"
 date: 2026-08-14T16:00:00+08:00
-draft: true
+draft: false
 categories: ["WAM"]
 tags: ["WAM", "DreamZero", "DiT", "VAE", "Flow Matching", "机器人"]
 ShowToc: true
