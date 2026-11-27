@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="1040" viewBox="0 0 420 1040" role="img" aria-labelledby="title desc">
+  <title id="title">π₀：复用固定图文 KV，多轮更新同一动作块</title>
+  <desc id="desc">当前图像和指令经过前缀前向，生成固定的逐层 KV。初始化随机噪声动作块后，动作专家在每轮读取同一份图文缓存，重算状态与动作 suffix，更新整个动作块和 flow 时间。未完成积分时循环动作专家计算，积分完成后输出连续动作块。这里采用 OpenPI 基础 π₀ 的缓存范围。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #172b3a; text-anchor: middle; font-size: 20px; }
+      .heading { font-size: 27px; font-weight: 700; text-anchor: start; }
+      .subheading { font-size: 17px; fill: #475569; text-anchor: start; }
+      .small { font-size: 17px; fill: #475569; }
+      .node { stroke: #cbd5e1; stroke-width: 1.5; rx: 12; }
+      .edge { fill: none; stroke: #475569; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="420" height="1040" fill="#ffffff" rx="16"/>
+  <text x="24" y="40" class="heading">π₀ · Flow 动作生成</text>
+  <text x="24" y="72" class="subheading">循环轴：修改同一个连续动作块</text>
+
+  <rect x="40" y="98" width="300" height="72" class="node" fill="#f1f5f9"/>
+  <text x="190" y="129">当前图像 + 语言指令</text>
+  <text x="190" y="155" class="small">机器人状态另走 suffix</text>
+  <path d="M190 170 V202" class="edge"/>
+
+  <rect x="40" y="206" width="300" height="104" class="node" fill="#e0f2fe"/>
+  <text x="190" y="238">图文 Prefix 前向</text>
+  <text x="190" y="266">缓存图文位置的逐层 K / V</text>
+  <text x="190" y="294" class="small">整次采样复用，长度 P 固定</text>
+  <path d="M190 310 V346" class="edge"/>
+
+  <rect x="40" y="350" width="300" height="72" class="node" fill="#f1f5f9"/>
+  <text x="190" y="380">初始化随机噪声动作块</text>
+  <text x="190" y="407" class="small">H 个未来动作位置，flow 时间为 1</text>
+  <path d="M190 422 V456" class="edge"/>
+
+  <rect x="40" y="460" width="300" height="108" class="node" fill="#fff7ed"/>
+  <text x="190" y="491">Action expert 前向</text>
+  <text x="190" y="521">重算状态与动作的 Q / K / V</text>
+  <text x="190" y="550" class="small">每层读取同一份图文 KV</text>
+  <path d="M190 568 V602" class="edge"/>
+
+  <rect x="40" y="606" width="300" height="92" class="node" fill="#fff7ed"/>
+  <text x="190" y="637">同时更新整个动作块</text>
+  <text x="190" y="663" class="small">推进 flow 时间，逐步得到动作</text>
+  <text x="190" y="687" class="small">本轮动作 KV 不追加到固定缓存</text>
+  <path d="M190 698 V716" class="edge"/>
+
+  <path d="M190 720 L312 770 L190 820 L68 770 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="190" y="777">积分结束？</text>
+  <path d="M312 770 H386 V514 H344" class="edge"/>
+  <text x="360" y="749" class="small">否</text>
+  <path d="M190 820 V868" class="edge"/>
+  <text x="211" y="852" class="small">是</text>
+
+  <rect x="40" y="872" width="300" height="74" class="node" fill="#ecfdf5"/>
+  <text x="190" y="903">输出 H 步连续动作</text>
+  <text x="190" y="931" class="small">交给外部控制流程执行</text>
+
+  <text x="210" y="989">动作反复更新，图文 KV 不变</text>
+  <text x="210" y="1018" class="small">下一次采样用新观测重建图文缓存</text>
+</svg>
