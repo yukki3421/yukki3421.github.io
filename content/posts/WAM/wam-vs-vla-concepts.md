@@ -1,7 +1,7 @@
 ---
 title: "WAM 概念篇：VLA vs WAM，Why Video as World State"
 date: 2026-08-13T14:00:00+08:00
-draft: true
+draft: false
 categories: ["WAM"]
 tags: ["WAM", "VLA", "DreamZero", "World Model", "机器人"]
 ShowToc: true
